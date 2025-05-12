@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper 
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.kosa.sj.post.dao.PostDAO">
+	
+	<select id="getBoardType" resultType="org.kosa.sj.post.vo.BoardType">
+		SELECT *
+		FROM TB_BOARD_TYPE
+	</select>
+	
+	<select id="list" resultType="org.kosa.sj.post.vo.Post">
+		SELECT *
+		FROM (
+		    SELECT rownum rnum, e.* 
+		    FROM (SELECT ep.*, u.user_name
+				    FROM TB_POST ep
+				    JOIN TB_USER u ON ep.user_no = u.user_no
+		        <where>
+		        	IS_POST_DELETE = 'N'
+		        	AND u.exit_status = 'N'
+		        	<if test="boardNo != null">
+			          AND board_no = #{boardNo}
+			        </if>
+		        	<if test="searchValue != null and searchValue != ''">
+		          		AND POST_TITLE LIKE '%' || #{searchValue} || '%'
+		        	</if>
+		      	</where>
+		        ORDER BY POST_REG_DATE DESC
+		    ) e
+		    WHERE rownum BETWEEN 1 AND ${end}
+		) o
+		WHERE o.rnum BETWEEN ${start} AND ${end}
+	</select>
+	
+	<select id="getTotalCount" resultType="int">
+		SELECT count(*)
+		FROM TB_POST
+		WHERE board_no=#{boardNo} AND IS_POST_DELETE = 'N'
+		<if test="searchValue != null and searchValue != ''">
+		AND POST_NO LIKE CONCAT(CONCAT('%',#{searchValue}),'%')
+		</if>
+	</select>
+	
+	<insert id="postRegist">
+		INSERT INTO TB_POST (post_no,user_no,board_no,post_title,post_content,comment_status,post_reg_date)
+		VALUES (TO_CHAR(seq_post_no.NEXTVAL),#{userNo},#{boardNo},#{postTitle},#{postContent},#{commentStatus},SYSDATE)
+	</insert>
+	
+	<select id="getPost" resultType="org.kosa.sj.post.vo.Post">
+		SELECT ep.*, u.user_name
+		FROM TB_POST ep JOIN TB_USER u ON ep.user_no = u.user_no
+		WHERE POST_NO = #{postNo}
+	</select>
+	
+	<update id="postUpdate">
+		UPDATE TB_POST 
+		SET POST_TITLE=#{postTitle}, POST_CONTENT=#{postContent}, POST_MOD_DATE=SYSDATE
+		WHERE POST_NO=#{postNo}
+	</update>
+	
+	<update id="postDelete" parameterType="String">
+		UPDATE TB_POST
+		SET IS_POST_DELETE='Y', POST_DELETE_DATE=SYSDATE
+		WHERE POST_NO = #{postNo}
+	</update>
+	
+	<update id="addViewCnt" parameterType="String">
+		UPDATE TB_POST
+		SET VIEW_CNT = VIEW_CNT+1
+		WHERE POST_NO = #{postNo}
+	</update>
+	
+</mapper>
